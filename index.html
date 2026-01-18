@@ -24,6 +24,40 @@
         .chat-messages::-webkit-scrollbar { width: 6px; }
         .chat-messages::-webkit-scrollbar-track { background: #f1f5f9; }
         .chat-messages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        
+        /* 跳动圆点动画 */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #64748b;
+            animation: typing-bounce 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes typing-bounce {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -344,6 +378,7 @@
                                     <div className="text-center text-slate-400 mt-8">
                                         <i className="fas fa-comments text-4xl mb-3"></i>
                                         <p className="text-sm">您好！我可以帮您解答关于<br/><strong>{currentEra.name}</strong>的问题。</p>
+                                        <p className="text-xs mt-2 text-slate-300">支持中文和英文提问</p>
                                     </div>
                                 )}
                                 {messages.map((msg, idx) => (
@@ -359,8 +394,12 @@
                                 ))}
                                 {isLoading && (
                                     <div className="text-left mb-3">
-                                        <div className="inline-block bg-slate-100 p-3 rounded-2xl">
-                                            <i className="fas fa-circle-notch fa-spin text-slate-400"></i>
+                                        <div className="inline-block bg-slate-100 rounded-2xl">
+                                            <div className="typing-indicator">
+                                                <div className="typing-dot"></div>
+                                                <div className="typing-dot"></div>
+                                                <div className="typing-dot"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
