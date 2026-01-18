@@ -1,0 +1,21 @@
+{
+  "name": "chronos-british-history",
+  "version": "1.0.0",
+  "description": "英国历史探索 - 龚凤乾教授设计",
+  "main": "index.html",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'No build step required'",
+    "deploy": "netlify deploy --prod"
+  },
+  "keywords": [
+    "british-history",
+    "education",
+    "timeline"
+  ],
+  "author": "龚凤乾教授",
+  "license": "MIT",
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  }
+}
