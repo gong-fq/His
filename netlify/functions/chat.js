@@ -1,10 +1,25 @@
-const https = require('https');
-
 exports.handler = async (event, context) => {
+  // 处理 CORS 预检请求
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      },
+      body: ''
+    };
+  }
+
   // 只允许 POST 请求
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ error: 'Method Not Allowed' })
     };
   }
@@ -16,9 +31,14 @@ exports.handler = async (event, context) => {
     const apiKey = process.env.DEEPSEEK_API_KEY;
     
     if (!apiKey) {
+      console.error('DEEPSEEK_API_KEY not configured');
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'API Key not configured' })
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ error: 'API Key not configured. Please set DEEPSEEK_API_KEY in environment variables.' })
       };
     }
 
@@ -33,8 +53,35 @@ exports.handler = async (event, context) => {
       ...messages
     ];
 
-    // 调用 DeepSeek API
-    const response = await callDeepSeekAPI(apiKey, apiMessages);
+    // 调用 DeepSeek API (使用 fetch)
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: apiMessages,
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('DeepSeek API error:', response.status, errorText);
+      throw new Error(`DeepSeek API returned ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid API response structure:', data);
+      throw new Error('Invalid API response structure');
+    }
+
+    const assistantMessage = data.choices[0].message.content;
 
     return {
       statusCode: 200,
@@ -44,12 +91,12 @@ exports.handler = async (event, context) => {
         'Access-Control-Allow-Headers': 'Content-Type'
       },
       body: JSON.stringify({ 
-        message: response 
+        message: assistantMessage 
       })
     };
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Function error:', error);
     return {
       statusCode: 500,
       headers: {
@@ -57,61 +104,9 @@ exports.handler = async (event, context) => {
         'Access-Control-Allow-Origin': '*'
       },
       body: JSON.stringify({ 
-        error: '抱歉，服务暂时不可用，请稍后再试。',
+        error: '抱歉，服务暂时不可用。请稍后再试。',
         details: error.message 
       })
     };
   }
 };
-
-// 调用 DeepSeek API 的函数
-function callDeepSeekAPI(apiKey, messages) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify({
-      model: 'deepseek-chat',
-      messages: messages,
-      temperature: 0.7,
-      max_tokens: 500
-    });
-
-    const options = {
-      hostname: 'api.deepseek.com',
-      port: 443,
-      path: '/v1/chat/completions',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': data.length
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let responseData = '';
-
-      res.on('data', (chunk) => {
-        responseData += chunk;
-      });
-
-      res.on('end', () => {
-        try {
-          const jsonResponse = JSON.parse(responseData);
-          if (jsonResponse.choices && jsonResponse.choices[0]) {
-            resolve(jsonResponse.choices[0].message.content);
-          } else {
-            reject(new Error('Invalid API response'));
-          }
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
-
-    req.on('error', (error) => {
-      reject(error);
-    });
-
-    req.write(data);
-    req.end();
-  });
-}
